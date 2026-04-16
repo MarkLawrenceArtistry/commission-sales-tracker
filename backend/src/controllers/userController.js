@@ -1,93 +1,94 @@
-const express = require('express')
-const db = require('../database')
-const { run, all, get } = require('../utils/helper')
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { run, all, get } = require('../utils/helper');
 
-const registerUser = async (req, res) => {
+const login = async (req, res) => {
     try {
-        const { email, password, name } = req.body
-        if(!email || !password || !name) {
-            return res.status(400).json({success:false,data:"All fields are required."})
+        const { email, password } = req.body;
+
+        // 1. Validation
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: "Email and password are required." });
         }
 
-        bcrypt.hash(password, 10, (err, hash) => {
-            if(err) {
-                return res.status(500).json({success:false,data:`Error hashing password: ${err.message}`})
+        // 2. Check if user exists
+        const user = await get(`SELECT * FROM users WHERE email = ?`, [email]);
+        
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Invalid email or password." });
+        }
+
+        // 3. Compare Passwords
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Invalid email or password." });
+        }
+
+        // 4. Generate JWT Token
+        const token = jwt.sign(
+            { id: user.id, email: user.email, name: user.name },
+            process.env.JWT_SECRET, 
+            { expiresIn: '8h' } // Token expires in 8 hours (typical work shift)
+        );
+
+        // 5. Response
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            token: token,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name
             }
+        });
 
-            const query = `
-                INSERT INTO users (email, password_hash, name)
-                VALUES (?, ?, ?)
-            `
+    } catch (err) {
+        res.status(500).json({ success: false, message: `Internal server error: ${err.message}` });
+    }
+};
 
-            const params = [email, hash, name]
+const register = async (req, res) => {
+    try {
+        const { email, password, name } = req.body;
 
-            db.run(query, params, function(err) {
-                if(err) {
-                    return res.status(500).json({success:false,data:`Internal Server Error: ${err.message}`})
-                } else {
-                    return res.status(200).json({success:true,data:{
-                        id: this.lastID,
-                        name: name,
-                        email: email
-                    }})
-                }
-            })
-        })
+        // 1. Validation
+        if (!email || !password || !name) {
+            return res.status(400).json({ success: false, message: "All fields are required." });
+        }
+
+        // 2. Check if user exists
+        const user = await get(`SELECT * FROM users WHERE email = ?`, [email]);
+        if (user) {
+            return res.status(401).json({ success: false, message: "Email already taken." });
+        }
+
+        // 3. Hash the password
+        const hash = bcrypt.hashSync(password, 10);
+
+        // 4. Insert the account
+        const query = `
+            INSERT INTO users (email, password_hash, name)
+            VALUES (?, ?, ?)
+        `
+        const params = [email, hash, name]
+        const result = await run(query, params)
+        
+        // 5. Response
+        res.status(200).json({
+            success: true,
+            message: "Register successful",
+            user: {
+                id: result.lastID,
+                email: email,
+                name: name
+            }
+        });
+
     } catch(err) {
-        return res.status(500).json({success:false,data:`Internal Server Error: ${err.message}`})
+        res.status(500).json({ success: false, message: `Internal server error: ${err.message}` });
     }
 }
 
-const login = async (req, res) => {};
-
-// const getAllStudent = async (req, res) => {
-//     try {
-//         const query = `
-//             SELECT * FROM students
-//         `
-        
-//         const result = await all(query, [])
-//         return res.status(200).json({success:true,data:result})
-//     } catch(err) {
-//         return res.status(500).json({success:false,data:`Internal Server Error: ${err.message}`})
-//     }
-// }
-
-// const updateStudent = async (req, res) => {
-//     try {
-//         const { id } = req.params
-//         const { name, age, grade } = req.body
-//         const query = `
-//             UPDATE students
-//             SET
-//                 name = COALESCE(?, name),
-//                 age = COALESCE(?, age),
-//                 grade = COALESCE(?, grade)
-//             WHERE id = ?
-//         `
-//         const params = [name, age, grade, id]
-
-//         const result = await run(query, params)
-//         return res.status(200).json({success:true,data:{ id: Number(req.params.id), name, age, grade }})
-//     } catch(err) {
-//         return res.status(500).json({success:false,data:`Internal Server Error: ${err.message}`})
-//     }
-// }
-
-// const deleteStudent = async (req, res) => {
-//     try {
-//         const { id } = req.params
-//         const query = `
-//             DELETE FROM students WHERE id = ?
-//         `
-//         const params = [id]
-
-//         const result = await run(query, params)
-//         return res.status(200).json({success:true,data:`Student deleted successfully!: ${result.lastID}`})
-//     } catch(err) {
-//         return res.status(500).json({success:false,data:`Internal Server Error: ${err.message}`})
-//     }
-// }
-
-module.exports = { registerUser }
+module.exports = { login, register };
