@@ -4,3 +4,4 @@ backend/package-lock.json
 frontend/package-lock.json
 backend/.env
 backend/data.db
+backend/convention

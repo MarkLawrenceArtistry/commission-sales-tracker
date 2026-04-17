@@ -47,7 +47,7 @@ const login = async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: `Internal server error: ${err.message}` });
     }
-};
+}
 
 const register = async (req, res) => {
     try {

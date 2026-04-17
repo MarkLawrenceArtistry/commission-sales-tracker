@@ -4,5 +4,6 @@ const { verifyToken } = require('../middlewares/auth')
 const salesController = require('../controllers/salesController')
 
 router.get('/:id', verifyToken, salesController.getAllSales);
+router.post('/:id', verifyToken, salesController.createSale);
 
 module.exports = router
