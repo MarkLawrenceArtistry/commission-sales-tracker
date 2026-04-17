@@ -37,7 +37,7 @@ const login = async (req, res) => {
             success: true,
             message: "Login successful",
             token: token,
-            user: {
+            data: {
                 id: user.id,
                 email: user.email,
                 name: user.name
@@ -79,7 +79,7 @@ const register = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Register successful",
-            user: {
+            data: {
                 id: result.lastID,
                 email: email,
                 name: name
@@ -91,4 +91,27 @@ const register = async (req, res) => {
     }
 }
 
-module.exports = { login, register };
+const checkSession = (req, res) => {
+    res.status(200).json({
+        success: true,
+        data: {
+            user: req.user
+        }
+    });
+}
+
+const getAllUsers = async (req, res) => {
+    try {
+        const query = `
+            SELECT * FROM users
+        `
+
+        const result = await all(query)
+
+        res.status(200).json({success:true,message:"Fetched all users successfully.",data:result})
+    } catch(err) {
+        res.status(500).json({ success: false, message: `Internal server error: ${err.message}` });
+    }
+}
+
+module.exports = { login, register, checkSession, getAllUsers };

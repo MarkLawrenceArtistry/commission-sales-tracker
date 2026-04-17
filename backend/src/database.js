@@ -16,6 +16,7 @@ db.serialize(() => {
         }
     })
 
+
     // query declarations
     const userQuery = `
         CREATE TABLE IF NOT EXISTS users (
@@ -25,15 +26,16 @@ db.serialize(() => {
             name TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             deletion_requested_at TIMESTAMP
-        )
+        );
     `;
     const salesQuery = `
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS sales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             amount TEXT NOT NULL,
             description TEXT,
-            date TEXT NOT NULL
+            date TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     `;
 
@@ -43,23 +45,35 @@ db.serialize(() => {
         if(err) {
             return console.error(`Error: ${err.message}.`)
         }
+
+        console.log('USERS TABLE DONE.')
     })
-     db.run(salesQuery, [], function(err) {
+    db.run(salesQuery, [], function(err) {
         if(err) {
             return console.error(`Error: ${err.message}.`)
         }
+
+        console.log('SALES TABLE DONE.')
     })
 
-    bcrypt.hash("Admin123!", 10, (err, hash) => {
-        db.run('INSERT OR IGNORE INTO users (email, password_hash, name) VALUES (?, ?, ?)',
-            ["marklawrencecatubay@gmail.com", hash, "Mark Lawrence"], function(err) {
+    async function seedAdmin() {
+        bcrypt.hash("Admin123!", 10, (err, hash) => {
+            db.run('INSERT OR IGNORE INTO users (email, password_hash, name) VALUES (?, ?, ?)',
+                ["marklawrencecatubay@gmail.com", hash, "Mark Lawrence"], function(err) {
+                if(err) {
+                    return
+                }
+            })
+        })
+
+        db.run('INSERT OR IGNORE INTO sales (user_id, amount, date) VALUES (?, ?, ?)', [1, '1500', 'April 18, 2026'], function(err) {
             if(err) {
                 return
             }
         })
-    })
-
-    console.log('CREATED DATABASE SUCCESSFULLY.')
+    }
+    
+    seedAdmin();
 })
 
 db.on('error', (err) => {
