@@ -21,11 +21,10 @@ const getAllSales = async (req, res) => {
 
 const createSale = async (req, res) => {
     try {
-        const { id } = req.params
-        let { amount, description, date } = req.body
+        let { user_id, amount, description, date } = req.body
 
-        if(!amount || !description || !date) {
-            return res.status(400).json({success:false,message:"All fields required."})
+        if(!amount) {
+            return res.status(400).json({success:false,message:"Amount required."})
         }
 
         amount = Number(amount)
@@ -33,8 +32,12 @@ const createSale = async (req, res) => {
             return res.status(400).json({success:false,message:"Amount cannot be negative."})
         }
 
+        if(!date) {
+            date = new Date().toLocaleString()
+        }
+
         // Check if user exists
-        const user = await get(`SELECT * FROM users WHERE id = ?`, [id]);
+        const user = await get(`SELECT * FROM users WHERE id = ?`, [user_id]);
         
         if (!user) {
             return res.status(401).json({ success: false, message: "Invalid user." });
@@ -44,7 +47,7 @@ const createSale = async (req, res) => {
             INSERT INTO sales (user_id, amount, description, date)
             VALUES (?, ?, ?, ?)
         `
-        const params = [id, amount, description, date]
+        const params = [user_id, amount, description, date]
 
         const result = await run(query, params)
         res.status(200).json({success:true,message:"Sale created successfully"})
@@ -53,4 +56,33 @@ const createSale = async (req, res) => {
     }
 }
 
-module.exports = { getAllSales, createSale }
+const deleteSale = async (req, res) => {
+    try {
+        const { id } = req.params
+        let { user_id  } = req.body
+
+        // Check if user exists
+        const user = await get(`SELECT * FROM users WHERE id = ?`, [user_id]);
+        
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Invalid user." });
+        }
+
+        const query = `
+            DELETE FROM sales
+            WHERE id = ? AND user_id = ?
+        `
+        const params = [id, user_id]
+
+        const result = await run(query, params)
+        if(result.changes === 0) {
+            return res.status(404).json({success:false,message:`Sale record not found.`})
+        }
+
+        res.status(200).json({success:true,message:"Sale deleted successfully"})
+    } catch(err) {
+        res.status(500).json({ success: false, message: `Internal server error: ${err.message}` });
+    }
+}
+
+module.exports = { getAllSales, createSale, deleteSale }

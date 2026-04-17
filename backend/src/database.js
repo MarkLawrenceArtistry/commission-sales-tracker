@@ -65,12 +65,6 @@ db.serialize(() => {
                 }
             })
         })
-
-        db.run('INSERT OR IGNORE INTO sales (user_id, amount, date) VALUES (?, ?, ?)', [1, '1500', 'April 18, 2026'], function(err) {
-            if(err) {
-                return
-            }
-        })
     }
     
     seedAdmin();
