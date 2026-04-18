@@ -85,4 +85,34 @@ const deleteSale = async (req, res) => {
     }
 }
 
-module.exports = { getAllSales, createSale, deleteSale }
+const dashboardKpi = async (req, res) => {
+    try {
+        const totalSales = await get(`SELECT SUM(amount) FROM sales`)
+        const totalAvgSales = await get(`SELECT AVG(amount) FROM sales`)
+
+        // total sales this month calculation
+        const now = new Date();
+        const monthPart = (now.getMonth() + 1) + '/'; 
+        const yearPart = '/' + now.getFullYear();
+        const queryThisMonth = `
+            SELECT SUM(amount) AS total
+            FROM sales
+            WHERE date LIKE ? OR date LIKE ?
+        `;
+        const pattern = `${monthPart}%${yearPart}%`;
+        const totalSalesThisMonth = await get(queryThisMonth, [pattern]);
+
+        res.status(200).json({
+            success:true,
+            message:"Dashboard KPIs fetched successfully.",
+            data:{
+                totalSales: totalSales,
+                totalAvgSales: totalAvgSales,
+                totalSalesThisMonth: totalSalesThisMonth,
+            }})
+    } catch(err) {
+        res.status(500).json({ success: false, message: `Internal server error: ${err.message}` });
+    }
+}
+
+module.exports = { getAllSales, createSale, deleteSale, dashboardKpi }

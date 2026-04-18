@@ -7,4 +7,6 @@ router.get('/:id', verifyToken, salesController.getAllSales);
 router.delete('/:id', verifyToken, salesController.deleteSale);
 router.post('/', verifyToken, salesController.createSale);
 
+router.get('/dashboard/kpi', verifyToken, salesController.dashboardKpi)
+
 module.exports = router
